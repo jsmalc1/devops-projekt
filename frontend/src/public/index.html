@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Event Ticketing</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; }
+        button:hover { background-color: #0056b3; }
+        #response { margin-top: 15px; font-weight: bold; color: green; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Kupi ulaznicu</h2>
+        <p>Event: <strong>DevSecOps Konferencija</strong></p>
+        <button onclick="kupiUlaznicu()">Naruči odmah (evt-1001)</button>
+        <div id="response"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080';
+
+        async function kupiUlaznicu() {
+            const resDiv = document.getElementById('response');
+            resDiv.innerText = "Obrada...";
+            try {
+                const response = await fetch(`${API_URL}/tickets/purchase`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ eventId: "evt-1001", customerEmail: "student@example.com", quantity: 2 })
+                });
+                if (response.ok) {
+                    resDiv.innerText = "Narudzba poslana";
+                } else {
+                    resDiv.innerText = "Greska kod API-a";
+                    resDiv.style.color = "red";
+                }
+            } catch (err) {
+                resDiv.innerText = "Greska kod spajanja na API";
+                resDiv.style.color = "red";
+            }
+        }
+    </script>
+</body>
+</html>
