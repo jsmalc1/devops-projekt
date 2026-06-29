@@ -10,7 +10,7 @@ EXPOSE 8080
 CMD ["npm", "run", "dev"]
 
 FROM base AS builder
-RUN npm ci --only=production
+RUN npm install --omit=dev
 COPY src/ ./src/
 
 FROM node:20-alpine AS production
