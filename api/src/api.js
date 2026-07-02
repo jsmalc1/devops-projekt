@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { Client } = require('pg');
 const { createClient } = require('redis');
-const crypto = require('crypto'); // <-- DODANO za generiranje UUID-a
+const crypto = require('crypto'); 
 require('dotenv').config();
 
 const app = express();
@@ -41,7 +41,6 @@ app.get('/readyz', async (req, res) => {
     }
 });
 
-// --- PRILAGOĐENO ZA NOVI FRONTEND ---
 app.get('/events', (req, res) => {
     res.json([
         { id: "evt-1", name: "DevSecOps Bootcamp", location: "Zagreb" },
@@ -55,12 +54,8 @@ app.post('/tickets/purchase', async (req, res) => {
     try {
         const orderId = crypto.randomUUID();
         const payload = { orderId, eventId, customerEmail, quantity, status: 'QUEUED' };
-        
-        // Ovdje sada zapravo šaljemo u Redis kako bi Worker mogao pokupiti!
         await redisClient.lPush('ticket_orders', JSON.stringify(payload));
         console.log(`Poslana narudzba za ${customerEmail}, orderId: ${orderId}`);
-        
-        // Vraćamo točno onakav JSON kakav profesor traži na slici
         res.status(200).json({ 
             message: "Order queued", 
             orderId: orderId 
@@ -70,7 +65,6 @@ app.post('/tickets/purchase', async (req, res) => {
         res.status(500).json({ error: 'Greska kod obrade narudzbe' });
     }
 });
-// ------------------------------------
 
 app.get('/tickets/orders', async (req, res) => {
     try {
