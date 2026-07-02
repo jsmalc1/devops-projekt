@@ -2,65 +2,71 @@ name: DevSecOps CI Pipeline
 
 on:
   push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
-
-permissions:
-  contents: read
-  packages: write
+    branches: [ "main", "master" ]
 
 jobs:
-  build-scan-push:
+  validate:
+    name: Matrix validate
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        service: [frontend, api, worker]
     steps:
-      - name: Checkout repozitorija
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: cd ${{ matrix.service }} && npm install
 
-      - name: Prijava na github container registry
+  trivy-iac-scan:
+    name: Trivy repository/IaC scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy vulnerability scanner in fs mode
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+ 
+  build-scan-publish:
+    name: Matrix build-scan-publish
+    needs: [validate, trivy-iac-scan]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [frontend, api, worker]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build frontend image
-        run: docker build --target production -t ghcr.io/${{ github.repository_owner }}/projekt-frontend:latest ./frontend
-
-      - name: Trivy (Frontend)
+          
+      - name: Build an image from Dockerfile
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/projekt-${{ matrix.service }}:latest ./${{ matrix.service }}
+          
+      - name: Run Trivy vulnerability scanner on image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'ghcr.io/${{ github.repository_owner }}/projekt-frontend:latest'
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/projekt-${{ matrix.service }}:latest'
           format: 'table'
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
-
-      - name: Push frontend image na GHCR
-        run: docker push ghcr.io/${{ github.repository_owner }}/projekt-frontend:latest
-
-      - name: Build API image
-        run: docker build --target production -t ghcr.io/${{ github.repository_owner }}/projekt-api:latest ./api
-
-      - name: Trivy (API)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'ghcr.io/${{ github.repository_owner }}/projekt-api:latest'
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
-
-      - name: Push API image na GHCR
-        run: docker push ghcr.io/${{ github.repository_owner }}/projekt-api:latest
-
-      - name: Build worker image
-        run: docker build --target production -t ghcr.io/${{ github.repository_owner }}/projekt-worker:latest ./worker
-
-      - name: Trivy (Worker)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'ghcr.io/${{ github.repository_owner }}/projekt-worker:latest'
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
-
-      - name: Push worker image na GHCR
-        run: docker push ghcr.io/${{ github.repository_owner }}/projekt-worker:latest
+          
+      - name: Push image to GitHub Container Registry
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/projekt-${{ matrix.service }}:latest
