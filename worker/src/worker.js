@@ -18,18 +18,39 @@ async function main() {
     await pgClient.connect();
     console.log('Worker - spojen na PostgreSQL');
 
+    await pgClient.query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        order_id VARCHAR(255) PRIMARY KEY,
+        event_id VARCHAR(255),
+        customer_email VARCHAR(255),
+        quantity INTEGER,
+        status VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('Worker - Tablica "orders" je spremna');
+
     setInterval(async () => {
       try {
-        console.log('Worker - Provjera Redis reda cekanja za nove rezervacije ulaznica...');
-        // Ovdje bi isla stvarna logika
-        console.log('Worker - Ulaznica uspjesno obradena i spremljena u bazu podataka.');
+        const item = await redisClient.rPop('ticket_orders');
+        
+        if (item) {
+          const order = JSON.parse(item);
+          console.log(`Worker - obraduje: ${order.orderId} za ${order.customerEmail}`);
+          
+          await pgClient.query(
+            'INSERT INTO orders (order_id, event_id, customer_email, quantity, status) VALUES ($1, $2, $3, $4, $5)',
+            [order.orderId, order.eventId, order.customerEmail, order.quantity, order.status]
+          );
+          
+          console.log(`Worker - Narudzba ${order.orderId} uspjesno spremljena u bazu`);
+        }
       } catch (err) {
         console.error('Worker - Greska kod obrade ulaznice:', err.message);
       }
-    }, 8000);
-
+    }, 2000);
   } catch (error) {
-    console.error('Greska pri inicijalizaciji Workera:', error.message);
+    console.error('Greska kod inicijalizacije Workera:', error.message);
     process.exit(1);
   }
 }
@@ -41,7 +62,7 @@ const gracefulShutdown = async (signal) => {
   try {
     await redisClient.quit();
     await pgClient.end();
-    console.log('Veze prema bazi i Redisu zatvorene. Gasenje kontenjnera');
+    console.log('Veze prema bazi i Redisu zatvorene. Gasenje kontejnera');
     process.exit(0);
   } catch (err) {
     console.error('Greska kod shutdowna:', err);

@@ -27,7 +27,10 @@ const pgClient = new Client({ connectionString: DATABASE_URL });
 })();
 
 app.get('/healthz', (req, res) => {
-    res.status(200).send('OK');
+    res.status(200).json({ 
+        status: "ok", 
+        service: "api" 
+    });
 });
 
 app.get('/readyz', async (req, res) => {
@@ -68,9 +71,22 @@ app.post('/tickets/purchase', async (req, res) => {
 
 app.get('/tickets/orders', async (req, res) => {
     try {
-        res.json([{ id: 1, customer: 'student@example.com', status: 'processed' }]);
+        const result = await pgClient.query(`
+            SELECT 
+                order_id, 
+                event_id, 
+                customer_email, 
+                quantity, 
+                status, 
+                created_at 
+            FROM orders 
+            ORDER BY created_at DESC
+        `);
+        
+        res.json(result.rows);
     } catch (error) {
-        res.status(500).json({ error: 'Greska kod dohvata narudzbi' });
+        console.error('Greska kod dohvata narudzbi:', error.message);
+        res.status(500).json({ error: 'Greska kod dohvata narudzbi iz baze' });
     }
 });
 
