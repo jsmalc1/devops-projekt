@@ -77,6 +77,9 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
+          env:
+            - name: REDIS_URL
+              value: "redis://redis-service:6379" # <- DODANO: Osigurava da API gađa K8s Redis
           envFrom:
             - configMapRef:
                 name: ticketing-config
@@ -133,6 +136,9 @@ spec:
         - name: worker
           image: ghcr.io/jsmalc1/projekt-worker:latest
           imagePullPolicy: Always
+          env:
+            - name: REDIS_URL
+              value: "redis://redis-service:6379" # <- DODANO: Ista baza za Workera
           envFrom:
             - configMapRef:
                 name: ticketing-config

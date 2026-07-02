@@ -33,11 +33,6 @@ jobs:
           format: 'table'
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
-      - name: Upload Trivy IaC scan artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-config-sarif
-          path: trivy-config.sarif
  
   build-scan-publish:
     name: Matrix build-scan-publish
@@ -71,12 +66,6 @@ jobs:
           format: 'table'
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
-
-      - name: Upload Trivy Image scan artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-${{ matrix.service }}-image-sarif
-          path: trivy-${{ matrix.service }}-image.sarif
           
       - name: Push image to GitHub Container Registry
         run: |
