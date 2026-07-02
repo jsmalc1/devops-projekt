@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ticketing-config
+data:
+  REDIS_URL: "redis://redis-service:6379"
+  PORT: "8080"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ticketing-secrets
+type: Opaque
+data:
+  POSTGRES_PASSWORD: ZGV2c2Vjb3BzX3NlY3JldF9wYXNz
+  POSTGRES_USER: cG9zdGdyZXM= 
+  POSTGRES_DB: dGlja2V0aW5n
+  DATABASE_URL: cG9zdGdyZXNxbDovL3Bvc3RncmVzOmRldnNlY29wc19zZWNyZXRfcGFzc0Bwb3N0Z3Jlcy1zZXJ2aWNlOjU0MzIvdGlja2V0aW5n

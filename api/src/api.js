@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { Client } = require('pg');
 const { createClient } = require('redis');
+const crypto = require('crypto'); // <-- DODANO za generiranje UUID-a
 require('dotenv').config();
 
 const app = express();
@@ -40,23 +41,36 @@ app.get('/readyz', async (req, res) => {
     }
 });
 
+// --- PRILAGOĐENO ZA NOVI FRONTEND ---
 app.get('/events', (req, res) => {
     res.json([
-        { id: 'evt-1001', name: 'DevSecOps Konferencija', date: '2026-10-15' },
-        { id: 'evt-1002', name: 'Kubernetes Radionica', date: '2026-11-20' }
+        { id: "evt-1", name: "DevSecOps Bootcamp", location: "Zagreb" },
+        { id: "evt-2", name: "Cloud Native Day", location: "Split" },
+        { id: "evt-3", name: "Security Engineering Meetup", location: "Rijeka" }
     ]);
 });
 
 app.post('/tickets/purchase', async (req, res) => {
     const { eventId, customerEmail, quantity } = req.body;
     try {
-        const orderInfo = JSON.stringify({ eventId, customerEmail, quantity, status: 'pending' });
-        console.log(`Poslana narudzba za ${customerEmail}`);
-        res.status(202).json({ message: 'Narudzba primljena i u obradi' });
+        const orderId = crypto.randomUUID();
+        const payload = { orderId, eventId, customerEmail, quantity, status: 'QUEUED' };
+        
+        // Ovdje sada zapravo šaljemo u Redis kako bi Worker mogao pokupiti!
+        await redisClient.lPush('ticket_orders', JSON.stringify(payload));
+        console.log(`Poslana narudzba za ${customerEmail}, orderId: ${orderId}`);
+        
+        // Vraćamo točno onakav JSON kakav profesor traži na slici
+        res.status(200).json({ 
+            message: "Order queued", 
+            orderId: orderId 
+        });
     } catch (error) {
+        console.error('Greska kod obrade narudzbe:', error);
         res.status(500).json({ error: 'Greska kod obrade narudzbe' });
     }
 });
+// ------------------------------------
 
 app.get('/tickets/orders', async (req, res) => {
     try {
