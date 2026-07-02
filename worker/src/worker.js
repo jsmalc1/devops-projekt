@@ -36,6 +36,7 @@ async function main() {
         
         if (item) {
           const order = JSON.parse(item);
+          order.status = 'processed';
           console.log(`Worker - obraduje: ${order.orderId} za ${order.customerEmail}`);
           
           await pgClient.query(
